@@ -1,0 +1,14 @@
+# task_3fc1aec9
+
+- route: `crypto_price`
+- done: `True`
+- blocked: `False`
+- steps: `3`
+
+## Prompt
+Get me BTC price as of 3rd march 2026
+
+## Notes
+- LLM reasoning unavailable: Error code: 401 - {'error': {'message': 'No cookie auth credentials found', 'code': 401}}
+- Command 'curl' already installed
+- Provider 'coinpaprika' failed: 402 Client Error: Payment Required for url: https://api.coinpaprika.com/v1/coins/btc-bitcoin/ohlcv/historical?start=2026-03-03T00%3A00%3A00Z&end=2026-03-03T23%3A59%3A59Z
