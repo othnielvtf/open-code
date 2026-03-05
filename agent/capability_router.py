@@ -20,6 +20,8 @@ class CapabilityRouter:
             return "self_extension"
         if "youtube.com/" in p or "youtu.be/" in p or ("youtube" in p and "download" in p):
             return "youtube_download"
+        if "ping " in p or p.startswith("ping"):
+            return "network_ops"
         if any(k in p for k in ["btc", "bitcoin", "price", "coingecko"]):
             return "crypto_price"
         if input_file and any(input_file.lower().endswith(ext) for ext in self.MEDIA_EXTENSIONS):

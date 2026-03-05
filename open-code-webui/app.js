@@ -141,6 +141,47 @@ function keyValueGrid(items = []) {
   `;
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatPrimaryResponse(text) {
+  const safe = String(text || "").trim();
+  const normalized = safe.replace(/\r\n/g, "\n");
+  const dashParts = normalized.split(/\s-\s/g).map((s) => s.trim()).filter(Boolean);
+
+  if (!normalized.includes("\n") && dashParts.length >= 4) {
+    const lead = `<p class="response-paragraph">${escapeHtml(dashParts[0])}</p>`;
+    const bullets = dashParts
+      .slice(1)
+      .map((part) => `<li>${escapeHtml(part)}</li>`)
+      .join("");
+    return `${lead}<ul class="response-list">${bullets}</ul>`;
+  }
+
+  return normalized
+    .split(/\n{2,}/)
+    .map((block) => `<p class="response-paragraph">${escapeHtml(block).replaceAll("\n", "<br>")}</p>`)
+    .join("");
+}
+
+function getPrimaryResponse(payload, data) {
+  const candidates = [
+    payload?.response,
+    data?.response_text,
+    data?.analysis,
+    payload?.analysis,
+  ];
+  const found = candidates.find((v) => typeof v === "string" && v.trim().length > 0);
+  if (found) return found.trim();
+  return payload?.done ? "Task completed." : "Task is running.";
+}
+
 function renderDigest(payload) {
   const d = payload?.data || {};
   const result = d.provider_result || {};
@@ -160,12 +201,12 @@ function renderDigest(payload) {
     summaryParts.length > 0
       ? `Task completed with ${summaryParts.join(" | ")}.`
       : "Task completed. See structured output sections below.";
-  const primaryResponse = payload.response || d.response_text || "Task completed.";
+  const primaryResponseHtml = formatPrimaryResponse(getPrimaryResponse(payload, d));
 
   return `
     <section>
       <strong>Response</strong>
-      <p style="margin: .35rem 0 0; line-height: 1.45;">${primaryResponse}</p>
+      ${primaryResponseHtml}
     </section>
 
     <details class="details-block">

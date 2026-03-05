@@ -80,6 +80,22 @@
       "failure_count": 0,
       "success_rate": 1.0,
       "reliability_score": 0.2
+    },
+    {
+      "name": "network_ops_workflow",
+      "route": "network_ops",
+      "purpose": "Reusable workflow for route 'network_ops'",
+      "last_status": "completed",
+      "dependencies": [
+        "ping"
+      ],
+      "last_tool": null,
+      "last_tool_status": null,
+      "times_used": 1,
+      "success_count": 1,
+      "failure_count": 0,
+      "success_rate": 1.0,
+      "reliability_score": 0.1
     }
   ]
 }

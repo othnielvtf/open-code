@@ -63,3 +63,14 @@ This file is a human-readable companion to `state/capabilities.json`.
 - last_tool: `/Users/othnielnaga/Desktop/open-code/tools/telegram_interface.py`
 - last_tool_status: `template_tool_generated`
 
+### network_ops_workflow
+- route: `network_ops`
+- purpose: Reusable workflow for route 'network_ops'
+- last_status: `completed`
+- times_used: 1
+- success_count: 1
+- failure_count: 0
+- success_rate: 1.00
+- reliability_score: 0.10
+- dependencies: ping
+

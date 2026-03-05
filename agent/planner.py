@@ -33,6 +33,11 @@ class Planner:
                 return "query_crypto_providers"
             return "finalize"
 
+        if route == "network_ops":
+            if "network_command_result" not in ctx.data:
+                return "execute_network_command"
+            return "finalize"
+
         if route == "audio_transcription":
             if "audio_ready" not in ctx.data:
                 return "ensure_audio_stack"

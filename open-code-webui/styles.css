@@ -57,14 +57,16 @@ body {
 }
 
 .chat {
-  min-height: 55vh;
+  min-height: 0;
   max-height: 68vh;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 1rem;
   background: linear-gradient(180deg, #0c121c, #0a1018);
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.8rem;
   box-shadow: var(--shadow);
 }
@@ -74,17 +76,21 @@ body {
   border: 1px solid var(--line);
   padding: 0.8rem 0.9rem;
   max-width: 92%;
+  min-width: 0;
+  width: fit-content;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .bubble-user {
-  justify-self: end;
+  align-self: flex-end;
   background: linear-gradient(145deg, #285d83, #1f3d68);
   color: #f2f8ff;
   border-color: #335e8b;
 }
 
 .bubble-bot {
-  justify-self: start;
+  align-self: flex-start;
   background: var(--surface);
 }
 
@@ -105,6 +111,15 @@ body {
   margin-top: 0.45rem;
   display: grid;
   gap: 0.6rem;
+  min-width: 0;
+}
+
+.bubble-content p,
+.bubble-content li,
+.bubble-content strong,
+.bubble-content summary {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .summary {
@@ -119,6 +134,7 @@ body {
   border-radius: 10px;
   padding: 0.55rem;
   background: #0d141f;
+  min-width: 0;
 }
 
 .details-block > summary {
@@ -144,6 +160,18 @@ body {
 .details-block[open] {
   display: grid;
   gap: 0.6rem;
+}
+
+.response-paragraph {
+  margin: 0.35rem 0 0;
+  line-height: 1.45;
+}
+
+.response-list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
 }
 
 .kv-grid {

@@ -8,6 +8,7 @@ from agent.memory_manager import MemoryManager
 from agent.redaction import Redactor
 from agent.retry_policy import RetryPolicy
 from agent.command_runner import CommandRunner
+from agent.command_runner import CommandResult
 
 
 class Phase5HardeningTests(unittest.TestCase):
@@ -105,6 +106,31 @@ class Phase5HardeningTests(unittest.TestCase):
 
             q3 = ex.run(prompt="Who are you?", max_steps=2)
             self.assertIn("Nova", (q3.get("response") or ""))
+
+    def test_network_ops_ping_executes_command(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "state" / "memory").mkdir(parents=True, exist_ok=True)
+            (root / "state" / "brain.md").write_text("- `Soul.md`\n", encoding="utf-8")
+            (root / "state" / "memory" / "Soul.md").write_text("soul", encoding="utf-8")
+            mm = MemoryManager(root)
+            ex = AgentExecutor(project_root=root, memory_manager=mm)
+
+            ex.runner.run = lambda cmd, timeout=120: CommandResult(  # type: ignore[method-assign]
+                command=" ".join(cmd) if isinstance(cmd, list) else str(cmd),
+                returncode=0,
+                stdout="PING google.com (142.250.0.0): 56 data bytes",
+                stderr="",
+                blocked=False,
+                block_reason=None,
+            )
+
+            out = ex.run(prompt="can you ping google.com", max_steps=3)
+            self.assertEqual(out.get("route"), "network_ops")
+            self.assertTrue(out.get("done"))
+            self.assertIn("Ping completed successfully", out.get("response") or "")
+            result = out.get("data", {}).get("network_command_result", {})
+            self.assertEqual(result.get("returncode"), 0)
 
 
 if __name__ == "__main__":

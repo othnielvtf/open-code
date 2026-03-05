@@ -4,6 +4,7 @@ import json
 import re
 import statistics
 from datetime import datetime, timezone
+import platform
 from pathlib import Path
 from uuid import uuid4
 
@@ -78,8 +79,9 @@ class AgentExecutor:
         self._bootstrap_context(route, ctx)
 
         # Prime reasoning with brain context.
-        if route == "identity":
-            ctx.notes.append("Identity route uses deterministic memory-driven handling.")
+        deterministic_routes = {"identity", "network_ops"}
+        if route in deterministic_routes:
+            ctx.notes.append(f"{route} route uses deterministic memory-driven handling.")
         elif self.llm.is_configured():
             try:
                 analysis, meta = self.llm.reason(prompt, memory_bundle, model_override=model_override)
@@ -91,11 +93,11 @@ class AgentExecutor:
             ctx.notes.append("LLM reasoning unavailable: OPENROUTER_API_KEY not configured")
 
         while ctx.steps_taken < max_steps and not (ctx.done or ctx.blocked):
-            if route != "identity":
+            if route not in deterministic_routes:
                 self._llm_step_reflection(route, ctx, memory_bundle, model_override=model_override, stage="before_action")
             action = self.planner.next_action(route, ctx)
             self._execute_action(route, action, ctx)
-            if route != "identity":
+            if route not in deterministic_routes:
                 self._llm_step_reflection(route, ctx, memory_bundle, model_override=model_override, stage="after_action")
             ctx.steps_taken += 1
 
@@ -165,6 +167,58 @@ class AgentExecutor:
                 ctx.data["http_ready"] = True
             else:
                 ctx.blocked = True
+            return
+
+        if action == "execute_network_command":
+            network_cmd = self._extract_network_command(ctx.prompt)
+            if not network_cmd:
+                ctx.blocked = True
+                ctx.notes.append("Could not determine a safe network command from prompt")
+                ctx.data["response_text"] = "I could not parse a safe network command from that request."
+                return
+
+            base_cmd = network_cmd[0]
+            package = self._command_install_package(base_cmd)
+            ok, msg, event = self.deps.ensure_command(
+                base_cmd,
+                package,
+                task_id=ctx.data.get("task_id"),
+                reason=f"Network diagnostic request requires '{base_cmd}'",
+            )
+            ctx.notes.append(msg)
+            ctx.data["install_events"].append(event)
+            if not ok:
+                ctx.blocked = True
+                ctx.data["response_text"] = f"Unable to install required command '{base_cmd}': {msg}"
+                return
+
+            result = self.runner.run(network_cmd, timeout=40)
+            ctx.data["network_command_result"] = {
+                "command": " ".join(network_cmd),
+                "returncode": result.returncode,
+                "stdout": result.stdout,
+                "stderr": result.stderr,
+                "blocked": result.blocked,
+                "block_reason": result.block_reason,
+            }
+            if result.blocked:
+                ctx.blocked = True
+                ctx.data["response_text"] = f"Command blocked by policy: {result.block_reason}"
+                return
+            if result.returncode == 0:
+                snippet = "\n".join((result.stdout or "").splitlines()[:8])
+                ctx.data["response_text"] = (
+                    "Ping completed successfully.\n"
+                    f"Command: {' '.join(network_cmd)}\n"
+                    f"Output:\n{snippet}"
+                )
+            else:
+                snippet = "\n".join((result.stderr or result.stdout or "").splitlines()[:8])
+                ctx.data["response_text"] = (
+                    "Ping command executed but failed.\n"
+                    f"Command: {' '.join(network_cmd)}\n"
+                    f"Output:\n{snippet}"
+                )
             return
 
         if action == "query_crypto_providers":
@@ -485,6 +539,8 @@ def task(inp: PromptIn):
         deps: list[str] = []
         if route == "crypto_price":
             deps = ["curl", "requests"]
+        elif route == "network_ops":
+            deps = ["ping"]
         elif route == "audio_transcription":
             deps = ["ffmpeg", "openai"]
         elif route == "youtube_download":
@@ -584,6 +640,30 @@ def task(inp: PromptIn):
         if not m:
             return None
         return m.group(0).rstrip(".,)")
+
+    def _extract_network_command(self, prompt: str) -> list[str] | None:
+        text = prompt.strip()
+        lowered = text.lower()
+
+        host: str | None = None
+        direct = re.match(r"^ping\s+([A-Za-z0-9.-]+)$", lowered)
+        if direct:
+            host = direct.group(1)
+        else:
+            ask = re.search(r"\bping\s+([A-Za-z0-9.-]+)\b", lowered)
+            if ask:
+                host = ask.group(1)
+
+        if not host:
+            return None
+        if not re.fullmatch(r"[A-Za-z0-9.-]{1,253}", host):
+            return None
+        return ["ping", "-c", "4", host]
+
+    def _command_install_package(self, command: str) -> str:
+        if command == "ping" and platform.system().lower() == "linux":
+            return "iputils-ping"
+        return command
 
     def _extract_name_from_identity_prompt(self, prompt: str) -> str | None:
         name_match = re.search(
