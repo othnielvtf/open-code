@@ -2,7 +2,7 @@
 
 A lightweight web UI that behaves like a chat client for your general-purpose agent endpoint:
 
-- `POST http://52.77.216.135:8080/task`
+- Default endpoint: `POST http://localhost:8080/task`
 - Request body:
   ```json
   {
@@ -33,8 +33,9 @@ Open:
 
 ## Notes
 
-- The endpoint is currently hardcoded in `app.js` as:
-  - `const API_URL = "http://52.77.216.135:8080/task";`
+- The server URL is configurable in the UI (`Server URL` field).
+- Default URL is `http://localhost:8080/task`.
+- The chosen URL is saved in browser `localStorage` and reused on reload.
 - If you serve this UI over HTTPS, browsers can block HTTP API calls (mixed content). Use HTTP for local testing, or expose the API over HTTPS.
 
 ## Expected response shape

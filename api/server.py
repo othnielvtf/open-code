@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from agent.executor import AgentExecutor
@@ -14,6 +15,17 @@ _memory = MemoryManager(PROJECT_ROOT)
 _executor = AgentExecutor(PROJECT_ROOT, _memory)
 
 app = FastAPI(title="Brain Agent API", version="1.0.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class TaskRequest(BaseModel):
