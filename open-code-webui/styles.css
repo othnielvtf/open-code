@@ -114,6 +114,38 @@ body {
   padding: 0.65rem;
 }
 
+.details-block {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.55rem;
+  background: #0d141f;
+}
+
+.details-block > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  list-style: none;
+}
+
+.details-block > summary::-webkit-details-marker {
+  display: none;
+}
+
+.details-block > summary::before {
+  content: "▸ ";
+  color: var(--accent);
+}
+
+.details-block[open] > summary::before {
+  content: "▾ ";
+}
+
+.details-block[open] {
+  display: grid;
+  gap: 0.6rem;
+}
+
 .kv-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

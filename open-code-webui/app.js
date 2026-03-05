@@ -160,64 +160,73 @@ function renderDigest(payload) {
     summaryParts.length > 0
       ? `Task completed with ${summaryParts.join(" | ")}.`
       : "Task completed. See structured output sections below.";
+  const primaryResponse = payload.response || d.response_text || "Task completed.";
 
   return `
-    <section class="summary">
-      <strong>Result Digest</strong>
-      <p style="margin: .35rem 0 0;">${summaryText}</p>
+    <section>
+      <strong>Response</strong>
+      <p style="margin: .35rem 0 0; line-height: 1.45;">${primaryResponse}</p>
     </section>
 
-    ${keyValueGrid(topStats(payload, d))}
+    <details class="details-block">
+      <summary>More info</summary>
+      <section class="summary">
+        <strong>Result Digest</strong>
+        <p style="margin: .35rem 0 0;">${summaryText}</p>
+      </section>
 
-    ${
-      Object.keys(result).length
-        ? `
-    <section>
-      <strong>Selected Result Object</strong>
-      ${keyValueGrid(
-        Object.entries(result).map(([k, v]) => ({
-          k: k.replaceAll("_", " "),
-          v: typeof v === "number" && /price|spread|value/.test(k) ? money(v, result.currency || "USD") : v,
-        }))
-      )}
-    </section>`
-        : ""
-    }
+      ${keyValueGrid(topStats(payload, d))}
 
-    ${
-      hasProviderRows
-        ? `
-    <section>
-      <strong>Provider Comparison</strong>
-      ${providerTable(d.provider_results)}
-    </section>`
-        : ""
-    }
+      ${
+        Object.keys(result).length
+          ? `
+      <section>
+        <strong>Selected Result Object</strong>
+        ${keyValueGrid(
+          Object.entries(result).map(([k, v]) => ({
+            k: k.replaceAll("_", " "),
+            v: typeof v === "number" && /price|spread|value/.test(k) ? money(v, result.currency || "USD") : v,
+          }))
+        )}
+      </section>`
+          : ""
+      }
 
-    ${
-      hasNotes
-        ? `
-    <section>
-      <strong>Execution Notes</strong>
-      ${notesList(payload.notes)}
-    </section>`
-        : ""
-    }
+      ${
+        hasProviderRows
+          ? `
+      <section>
+        <strong>Provider Comparison</strong>
+        ${providerTable(d.provider_results)}
+      </section>`
+          : ""
+      }
 
-    ${
-      hasTrace
-        ? `
-    <section>
-      <strong>LLM Trace (Token Cost Hotspots)</strong>
-      ${traceTable(d.llm_trace)}
-    </section>`
-        : ""
-    }
+      ${
+        hasNotes
+          ? `
+      <section>
+        <strong>Execution Notes</strong>
+        ${notesList(payload.notes)}
+      </section>`
+          : ""
+      }
 
-    <section>
-      <button type="button" class="raw-toggle" data-toggle="raw">Toggle Raw JSON</button>
-      <pre hidden>${JSON.stringify(payload, null, 2)}</pre>
-    </section>
+      ${
+        hasTrace
+          ? `
+      <section>
+        <strong>LLM Trace (Token Cost Hotspots)</strong>
+        ${traceTable(d.llm_trace)}
+      </section>`
+          : ""
+      }
+
+      <section>
+        <button type="button" class="raw-toggle" data-toggle="raw">Toggle Raw JSON</button>
+        <pre hidden>${JSON.stringify(payload, null, 2)}</pre>
+      </section>
+    </details>
   `;
 }
 

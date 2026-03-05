@@ -263,37 +263,69 @@ class MemoryManager:
     def get_agent_identity(self) -> dict[str, str]:
         path = self.memory_root / "Identity.md"
         if not path.exists():
-            return {"name": "", "essence": "Curious autonomous problem solver."}
+            return {"name": "", "essence": "Curious autonomous problem solver.", "awaiting_name": "false"}
         text = path.read_text(encoding="utf-8")
         name = ""
         essence = "Curious autonomous problem solver."
+        awaiting_name = "false"
         for line in text.splitlines():
             if line.lower().startswith("name:"):
                 name = line.split(":", 1)[1].strip()
             if line.lower().startswith("essence:"):
                 essence = line.split(":", 1)[1].strip()
-        return {"name": name, "essence": essence}
+            if line.lower().startswith("awaiting_name:"):
+                awaiting_name = line.split(":", 1)[1].strip().lower()
+        return {"name": name, "essence": essence, "awaiting_name": awaiting_name}
 
     def set_agent_name(self, name: str, *, task_id: str | None = None) -> None:
         path = self._assert_mutable("Identity.md")
         if not path.exists():
             path.write_text(
-                "# Identity\n\nname: \nessence: Curious autonomous problem solver.\n",
+                "# Identity\n\nname: \nessence: Curious autonomous problem solver.\nawaiting_name: false\n",
                 encoding="utf-8",
             )
         lines = path.read_text(encoding="utf-8").splitlines()
         updated = False
+        awaiting_updated = False
         for i, line in enumerate(lines):
             if line.lower().startswith("name:"):
                 lines[i] = f"name: {name}"
                 updated = True
-                break
+            if line.lower().startswith("awaiting_name:"):
+                lines[i] = "awaiting_name: false"
+                awaiting_updated = True
         if not updated:
             lines.append(f"name: {name}")
+        if not awaiting_updated:
+            lines.append("awaiting_name: false")
         path.write_text("\n".join(lines) + "\n", encoding="utf-8")
         self._record_memory_update(
             task_id=task_id,
             target="Identity.md",
             mode="replace",
             reason="identity_name_update",
+        )
+
+    def set_identity_awaiting_name(self, value: bool, *, task_id: str | None = None) -> None:
+        path = self._assert_mutable("Identity.md")
+        if not path.exists():
+            path.write_text(
+                "# Identity\n\nname: \nessence: Curious autonomous problem solver.\nawaiting_name: false\n",
+                encoding="utf-8",
+            )
+        lines = path.read_text(encoding="utf-8").splitlines()
+        updated = False
+        for i, line in enumerate(lines):
+            if line.lower().startswith("awaiting_name:"):
+                lines[i] = f"awaiting_name: {'true' if value else 'false'}"
+                updated = True
+                break
+        if not updated:
+            lines.append(f"awaiting_name: {'true' if value else 'false'}")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        self._record_memory_update(
+            task_id=task_id,
+            target="Identity.md",
+            mode="replace",
+            reason="identity_awaiting_name_update",
         )
