@@ -85,7 +85,7 @@ class Phase5HardeningTests(unittest.TestCase):
             (root / "state" / "memory").mkdir(parents=True, exist_ok=True)
             (root / "state" / "brain.md").write_text("- `Identity.md`\n", encoding="utf-8")
             (root / "state" / "memory" / "Identity.md").write_text(
-                "# Identity\n\nname: \nessence: curious helper.\n", encoding="utf-8"
+                "# Identity\n\nname: \nessence: curious helper.\nawaiting_name: false\n", encoding="utf-8"
             )
             mm = MemoryManager(root)
             ex = AgentExecutor(project_root=root, memory_manager=mm)
@@ -93,9 +93,15 @@ class Phase5HardeningTests(unittest.TestCase):
             q1 = ex.run(prompt="What is your name?", max_steps=2)
             self.assertEqual(q1.get("route"), "identity")
             self.assertIn("Would you like to name me", (q1.get("response") or ""))
+            id_state_1 = (root / "state" / "memory" / "Identity.md").read_text(encoding="utf-8")
+            self.assertIn("awaiting_name: true", id_state_1)
 
-            q2 = ex.run(prompt="I name you Nova", max_steps=2)
+            q2 = ex.run(prompt="Nova", max_steps=2)
+            self.assertEqual(q2.get("route"), "identity")
             self.assertIn("Nova", (q2.get("response") or ""))
+            id_state_2 = (root / "state" / "memory" / "Identity.md").read_text(encoding="utf-8")
+            self.assertIn("name: Nova", id_state_2)
+            self.assertIn("awaiting_name: false", id_state_2)
 
             q3 = ex.run(prompt="Who are you?", max_steps=2)
             self.assertIn("Nova", (q3.get("response") or ""))

@@ -59,6 +59,10 @@ class AgentExecutor:
         started = datetime.now(timezone.utc).isoformat()
         memory_bundle = self.memory_manager.load_brain_bundle()
         route = self.router.route(prompt, input_file)
+        identity_state = self.memory_manager.get_agent_identity()
+        awaiting_name = str(identity_state.get("awaiting_name", "false")).lower() == "true"
+        if route != "identity" and awaiting_name and self._is_simple_name_candidate(prompt):
+            route = "identity"
         ctx = TaskContext(prompt=prompt, input_file=input_file)
         ctx.data["task_id"] = task_id
         ctx.data["install_events"] = []
@@ -115,12 +119,12 @@ class AgentExecutor:
     def _execute_action(self, route: str, action: str, ctx: TaskContext) -> None:
         if action == "handle_identity":
             identity = self.memory_manager.get_agent_identity()
-            prompt_l = ctx.prompt.lower()
-            name_match = re.search(r"(?:your name is|call you|i name you)\s+([a-zA-Z0-9_-]{2,40})", prompt_l)
-            if name_match:
-                chosen = name_match.group(1).strip()
-                # Preserve user-provided style lightly.
-                chosen = chosen[0].upper() + chosen[1:]
+            chosen = self._extract_name_from_identity_prompt(ctx.prompt)
+            awaiting_name = str(identity.get("awaiting_name", "false")).lower() == "true"
+            if not chosen and awaiting_name and self._is_simple_name_candidate(ctx.prompt):
+                chosen = self._normalize_name_candidate(ctx.prompt)
+
+            if chosen:
                 self.memory_manager.set_agent_name(chosen, task_id=ctx.data.get("task_id"))
                 ctx.data["identity_name"] = chosen
                 ctx.data["response_text"] = (
@@ -133,11 +137,14 @@ class AgentExecutor:
             current_name = (identity.get("name") or "").strip()
             essence = (identity.get("essence") or "Curious autonomous problem solver.").strip()
             if current_name:
+                if awaiting_name:
+                    self.memory_manager.set_identity_awaiting_name(False, task_id=ctx.data.get("task_id"))
                 ctx.data["response_text"] = (
                     f"My name is {current_name}. "
                     f"I am {essence}"
                 )
             else:
+                self.memory_manager.set_identity_awaiting_name(True, task_id=ctx.data.get("task_id"))
                 ctx.data["response_text"] = (
                     "I do not have a chosen name yet. "
                     "Would you like to name me?"
@@ -577,6 +584,28 @@ def task(inp: PromptIn):
         if not m:
             return None
         return m.group(0).rstrip(".,)")
+
+    def _extract_name_from_identity_prompt(self, prompt: str) -> str | None:
+        name_match = re.search(
+            r"(?:your name is|call you|i name you)\s+([A-Za-z][A-Za-z0-9_-]{1,39})",
+            prompt,
+            flags=re.IGNORECASE,
+        )
+        if not name_match:
+            return None
+        return self._normalize_name_candidate(name_match.group(1))
+
+    def _normalize_name_candidate(self, value: str) -> str:
+        candidate = re.sub(r"[.!?]+$", "", value.strip())
+        if not candidate:
+            return ""
+        return candidate[0].upper() + candidate[1:]
+
+    def _is_simple_name_candidate(self, prompt: str) -> bool:
+        candidate = self._normalize_name_candidate(prompt)
+        if not candidate:
+            return False
+        return re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]{1,39}", candidate) is not None
 
     def _bootstrap_context(self, route: str, ctx: TaskContext) -> None:
         discovered = self.skill_discovery.discover()
