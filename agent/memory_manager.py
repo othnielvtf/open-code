@@ -259,3 +259,41 @@ class MemoryManager:
         if m2:
             failure = int(m2.group(1))
         return success, failure
+
+    def get_agent_identity(self) -> dict[str, str]:
+        path = self.memory_root / "Identity.md"
+        if not path.exists():
+            return {"name": "", "essence": "Curious autonomous problem solver."}
+        text = path.read_text(encoding="utf-8")
+        name = ""
+        essence = "Curious autonomous problem solver."
+        for line in text.splitlines():
+            if line.lower().startswith("name:"):
+                name = line.split(":", 1)[1].strip()
+            if line.lower().startswith("essence:"):
+                essence = line.split(":", 1)[1].strip()
+        return {"name": name, "essence": essence}
+
+    def set_agent_name(self, name: str, *, task_id: str | None = None) -> None:
+        path = self._assert_mutable("Identity.md")
+        if not path.exists():
+            path.write_text(
+                "# Identity\n\nname: \nessence: Curious autonomous problem solver.\n",
+                encoding="utf-8",
+            )
+        lines = path.read_text(encoding="utf-8").splitlines()
+        updated = False
+        for i, line in enumerate(lines):
+            if line.lower().startswith("name:"):
+                lines[i] = f"name: {name}"
+                updated = True
+                break
+        if not updated:
+            lines.append(f"name: {name}")
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        self._record_memory_update(
+            task_id=task_id,
+            target="Identity.md",
+            mode="replace",
+            reason="identity_name_update",
+        )

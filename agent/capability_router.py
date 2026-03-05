@@ -12,6 +12,8 @@ class CapabilityRouter:
 
     def route(self, prompt: str, input_file: str | None = None) -> str:
         p = prompt.lower()
+        if any(k in p for k in ["what is your name", "who are you", "what are you", "call you", "your name is", "i name you"]):
+            return "identity"
         if "telegram bot" in p or ("telegram" in p and "bot" in p):
             return "self_extension"
         if "rest api" in p or "http api" in p or ("api" in p and "scaffold" in p):

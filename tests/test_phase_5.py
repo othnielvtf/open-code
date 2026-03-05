@@ -79,6 +79,27 @@ class Phase5HardeningTests(unittest.TestCase):
             generated = out.get("data", {}).get("generated_tool_attempted")
             self.assertTrue(generated and Path(generated).exists())
 
+    def test_identity_route_asks_for_name_when_unset_and_persists_when_set(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "state" / "memory").mkdir(parents=True, exist_ok=True)
+            (root / "state" / "brain.md").write_text("- `Identity.md`\n", encoding="utf-8")
+            (root / "state" / "memory" / "Identity.md").write_text(
+                "# Identity\n\nname: \nessence: curious helper.\n", encoding="utf-8"
+            )
+            mm = MemoryManager(root)
+            ex = AgentExecutor(project_root=root, memory_manager=mm)
+
+            q1 = ex.run(prompt="What is your name?", max_steps=2)
+            self.assertEqual(q1.get("route"), "identity")
+            self.assertIn("Would you like to name me", (q1.get("response") or ""))
+
+            q2 = ex.run(prompt="I name you Nova", max_steps=2)
+            self.assertIn("Nova", (q2.get("response") or ""))
+
+            q3 = ex.run(prompt="Who are you?", max_steps=2)
+            self.assertIn("Nova", (q3.get("response") or ""))
+
 
 if __name__ == "__main__":
     unittest.main()

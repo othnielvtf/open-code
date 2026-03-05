@@ -7,6 +7,9 @@ class Planner:
     """Produces next action based on route and current context."""
 
     def next_action(self, route: str, ctx: TaskContext) -> str:
+        if route == "identity":
+            return "handle_identity"
+
         if route == "self_extension":
             if "extension_scaffolded" not in ctx.data:
                 return "scaffold_extension_interface"

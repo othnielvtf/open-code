@@ -7,6 +7,7 @@ Canonical master brain file loaded at task start.
 - `Persona.md`
 - `Directives.md`
 - `Skills.md`
+- `Identity.md`
 - `Failures.md`
 - `ProviderReliability.md`
 - `ToolBenchmarks.md`

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Task Chat UI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <h1>Agent Task Chat</h1>
+        <p>Run general-purpose tasks and inspect status, traces, and structured outputs.</p>
+      </header>
+
+      <main id="chat" class="chat" aria-live="polite"></main>
+
+      <form id="composer" class="composer">
+        <label class="endpoint">
+          <span>Server URL</span>
+          <input
+            id="serverUrl"
+            name="serverUrl"
+            type="url"
+            placeholder="http://localhost:8080/task"
+            required
+          />
+        </label>
+        <label class="visually-hidden" for="prompt">Task prompt</label>
+        <input
+          id="prompt"
+          name="prompt"
+          type="text"
+          placeholder="Get me BTC price as of 3rd march 2026"
+          value="Get me BTC price as of 3rd march 2026"
+          required
+        />
+        <label class="max-steps">
+          <span>Steps</span>
+          <input id="maxSteps" name="maxSteps" type="number" min="1" max="20" value="8" />
+        </label>
+        <button id="sendBtn" type="submit">Send</button>
+      </form>
+    </div>
+
+    <template id="userMessageTemplate">
+      <article class="bubble bubble-user">
+        <p class="bubble-role">You</p>
+        <p class="bubble-text"></p>
+      </article>
+    </template>
+
+    <template id="botMessageTemplate">
+      <article class="bubble bubble-bot">
+        <p class="bubble-role">Task Worker</p>
+        <div class="bubble-content"></div>
+      </article>
+    </template>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

@@ -74,7 +74,9 @@ class AgentExecutor:
         self._bootstrap_context(route, ctx)
 
         # Prime reasoning with brain context.
-        if self.llm.is_configured():
+        if route == "identity":
+            ctx.notes.append("Identity route uses deterministic memory-driven handling.")
+        elif self.llm.is_configured():
             try:
                 analysis, meta = self.llm.reason(prompt, memory_bundle, model_override=model_override)
                 ctx.data["analysis"] = analysis
@@ -85,10 +87,12 @@ class AgentExecutor:
             ctx.notes.append("LLM reasoning unavailable: OPENROUTER_API_KEY not configured")
 
         while ctx.steps_taken < max_steps and not (ctx.done or ctx.blocked):
-            self._llm_step_reflection(route, ctx, memory_bundle, model_override=model_override, stage="before_action")
+            if route != "identity":
+                self._llm_step_reflection(route, ctx, memory_bundle, model_override=model_override, stage="before_action")
             action = self.planner.next_action(route, ctx)
             self._execute_action(route, action, ctx)
-            self._llm_step_reflection(route, ctx, memory_bundle, model_override=model_override, stage="after_action")
+            if route != "identity":
+                self._llm_step_reflection(route, ctx, memory_bundle, model_override=model_override, stage="after_action")
             ctx.steps_taken += 1
 
         finished = datetime.now(timezone.utc).isoformat()
@@ -105,9 +109,42 @@ class AgentExecutor:
             "blocked": ctx.blocked,
             "notes": safe_notes,
             "data": safe_data,
+            "response": safe_data.get("response_text"),
         }
 
     def _execute_action(self, route: str, action: str, ctx: TaskContext) -> None:
+        if action == "handle_identity":
+            identity = self.memory_manager.get_agent_identity()
+            prompt_l = ctx.prompt.lower()
+            name_match = re.search(r"(?:your name is|call you|i name you)\s+([a-zA-Z0-9_-]{2,40})", prompt_l)
+            if name_match:
+                chosen = name_match.group(1).strip()
+                # Preserve user-provided style lightly.
+                chosen = chosen[0].upper() + chosen[1:]
+                self.memory_manager.set_agent_name(chosen, task_id=ctx.data.get("task_id"))
+                ctx.data["identity_name"] = chosen
+                ctx.data["response_text"] = (
+                    f"My name is now {chosen}. "
+                    "I’ll carry this identity in memory for future conversations."
+                )
+                ctx.done = True
+                return
+
+            current_name = (identity.get("name") or "").strip()
+            essence = (identity.get("essence") or "Curious autonomous problem solver.").strip()
+            if current_name:
+                ctx.data["response_text"] = (
+                    f"My name is {current_name}. "
+                    f"I am {essence}"
+                )
+            else:
+                ctx.data["response_text"] = (
+                    "I do not have a chosen name yet. "
+                    "Would you like to name me?"
+                )
+            ctx.done = True
+            return
+
         if action == "ensure_http":
             ok, msg, event = self.deps.ensure_command(
                 "curl",
